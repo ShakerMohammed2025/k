@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة المستودعات - التواصل</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* أنماط CSS السابقة تبقى كما هي */
+        /* ... */
+        
+        /* إضافة بعض الأنماط الإضافية */
+        .form-check {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .form-check-input {
+            margin-left: 10px;
+        }
+        
+        .mb-3 {
+            margin-bottom: 15px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- التطبيق الرئيسي -->
+    <div class="app-container" id="appContainer">
+        <!-- المحتوى يبقى كما هو -->
+        <!-- ... -->
+    </div>
+
+    <script>
+        // ===== نظام التخزين المحلي =====
+        const Storage = {
+            // المنتجات
+            getProducts() {
+                return JSON.parse(localStorage.getItem('products')) || [];
+            },
+            saveProducts(products) {
+                localStorage.setItem('products', JSON.stringify(products));
+            },
+            
+            // الحركات
+            getTransactions() {
+                return JSON.parse(localStorage.getItem('transactions')) || [];
+            },
+            saveTransactions(transactions) {
+                localStorage.setItem('transactions', JSON.stringify(transactions));
+            },
+            
+            // تذاكر الدعم
+            getTickets() {
+                return JSON.parse(localStorage.getItem('tickets')) || [];
+            },
+            saveTickets(tickets) {
+                localStorage.setItem('tickets', JSON.stringify(tickets));
+            },
+            
+            // الإعدادات
+            getSettings() {
+                return JSON.parse(localStorage.getItem('settings')) || { alertThreshold: 5 };
+            },
+            saveSettings(settings) {
+                localStorage.setItem('settings', JSON.stringify(settings));
+            },
+            
+            // المستخدمون
+            getUsers() {
+                return JSON.parse(localStorage.getItem('users')) || [
+                    { id: 1, name: 'محمد أحمد', email: 'admin@example.com', role: 'مدير', status: 'نشط' },
+                    { id: 2, name: 'سارة عبدالله', email: 'sara@example.com', role: 'مشرف', status: 'نشط' }
+                ];
+            },
+            saveUsers(users) {
+                localStorage.setItem('users', JSON.stringify(users));
+            },
+            
+            // رسائل الدردشة
+            getMessages() {
+                return JSON.parse(localStorage.getItem('messages')) || [
+                    { id: 1, sender: 'محمد أحمد', text: 'مرحباً بالجميع، كيف حالكم؟', time: '2023-10-05 10:30', type: 'received' },
+                    { id: 2, sender: 'سارة عبدالله', text: 'أهلاً وسهلاً، كل شيء على ما يرام', time: '2023-10-05 10:32', type: 'received' },
+                    { id: 3, sender: 'أنت', text: 'أنا أيضاً بخير، شكراً', time: '2023-10-05 10:35', type: 'sent' }
+                ];
+            },
+            saveMessages(messages) {
+                localStorage.setItem('messages', JSON.stringify(messages));
+            }
+        };
+
+        // ===== إدارة التطبيق =====
+        const App = {
+            init() {
+                this.initData();
+                this.bindEvents();
+                this.loadDashboard();
+                this.updateNotifications();
+            },
+            
+            initData() {
+                // تهيئة البيانات إذا كانت غير موجودة
+                if (!localStorage.getItem('products')) {
+                    const initialProducts = [
+                        { id: 1, name: 'هاتف ذكي', category: 'إلكترونيات', price: 1200, quantity: 25, image: 'https://via.placeholder.com/40', sales: 15 },
+                        { id: 2, name: 'جهاز لوحي', category: 'إلكترونيات', price: 800, quantity: 18, image: 'https://via.placeholder.com/40', sales: 12 },
+                        { id: 3, name: 'سماعات الأذن', category: 'إلكترونيات', price: 150, quantity: 5, image: 'https://via.placeholder.com/40', sales: 20 },
+                        { id: 4, name: 'شاحن متنقل', category: 'إلكترونيات', price: 200, quantity: 3, image: 'https://via.placeholder.com/40', sales: 8 }
+                    ];
+                    Storage.saveProducts(initialProducts);
+                }
+                
+                if (!localStorage.getItem('transactions')) {
+                    const initialTransactions = [
+                        { id: 'TRX-001', date: '2023-10-05', product: 'جهاز لوحي', type: 'in', quantity: 10, status: 'مكتمل' },
+                        { id: 'TRX-002', date: '2023-10-05', product: 'هاتف ذكي', type: 'out', quantity: 5, status: 'مكتمل' },
+                        { id: 'TRX-003', date: '2023-10-04', product: 'سماعات الأذن', type: 'out', quantity: 3, status: 'مكتمل' }
+                    ];
+                    Storage.saveTransactions(initialTransactions);
+                }
+                
+                if (!localStorage.getItem('tickets')) {
+                    const initialTickets = [
+                        { id: 1, title: 'مشكلة في تسجيل الدخول', category: 'technical', priority: 'high', status: 'open', author: 'مستخدم النظام', date: '2023-10-03', description: 'لا يمكنني تسجيل الدخول إلى النظام رغم صحة البيانات' },
+                        { id: 2, title: 'طلب ميزة جديدة', category: 'feature', priority: 'medium', status: 'open', author: 'مستخدم النظام', date: '2023-10-01', description: 'أرغب في إضافة تقارير متقدمة للمبيعات' },
+                        { id: 3, title: 'مشكلة في الطباعة', category: 'technical', priority: 'high', status: 'closed', author: 'أحمد محمد', date: '2023-09-28', description: 'الطباعة لا تعمل بشكل صحيح' }
+                    ];
+                    Storage.saveTickets(initialTickets);
+                }
+            },
+            
+            bindEvents() {
+                // أحداث القائمة الجانبية
+                document.querySelectorAll('.sidebar-menu a').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        
+                        // إزالة النشاط من جميع العناصر
+                        document.querySelectorAll('.sidebar-menu a').forEach(l => l.classList.remove('active'));
+                        document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active'));
+                        
+                        // إضافة النشاط للعنصر الحالي
+                        link.classList.add('active');
+                        
+                        const section = link.getAttribute('data-section');
+                        document.getElementById(section).classList.add('active');
+                        
+                        // تحديث عنوان الصفحة
+                        const pageTitleText = link.querySelector('span').textContent;
+                        document.querySelector('.page-title').innerHTML = `<i class="${link.querySelector('i').className}"></i> ${pageTitleText}`;
+                        
+                        // تحميل المحتوى حسب القسم
+                        this.loadSection(section);
+                    });
+                });
+                
+                // أحداث النماذج
+                document.querySelectorAll('.close-modal').forEach(button => {
+                    button.addEventListener('click', () => {
+                        button.closest('.modal').style.display = 'none';
+                    });
+                });
+                
+                // حدث إنشاء تذكرة جديدة
+                document.getElementById('newTicketBtn').addEventListener('click', () => {
+                    document.getElementById('ticketModal').style.display = 'flex';
+                });
+                
+                // حدث حفظ التذكرة
+                document.getElementById('saveTicket').addEventListener('click', () => {
+                    this.saveTicket();
+                });
+                
+                // حدث إرسال رسالة
+                document.getElementById('sendMessageBtn').addEventListener('click', () => {
+                    this.sendMessage();
+                });
+                
+                // إدخال الرسالة بالضغط على Enter
+                document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.sendMessage();
+                    }
+                });
+                
+                // حدث عرض التذاكر
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('view-ticket')) {
+                        const ticketId = e.target.getAttribute('data-id');
+                        this.viewTicket(ticketId);
+                    }
+                });
+                
+                // حدث إضافة تعليق
+                document.getElementById('addCommentBtn').addEventListener('click', () => {
+                    this.addComment();
+                });
+                
+                // حدث إغلاق التذكرة
+                document.getElementById('closeTicketBtn').addEventListener('click', () => {
+                    this.closeTicket();
+                });
+                
+                // حدث عرض الإشعارات
+                document.getElementById('notificationsBtn').addEventListener('click', () => {
+                    document.getElementById('notificationsModal').style.display = 'flex';
+                });
+                
+                // حدث إضافة حركة
+                document.getElementById('showTransactionModal').addEventListener('click', () => {
+                    alert('نموذج إضافة حركة جديد سيظهر هنا');
+                });
+                
+                // أحداث التبويبات
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const tabName = tab.getAttribute('data-tab');
+                        
+                        // إزالة النشاط من جميع التبويبات
+                        tab.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                        tab.parentElement.parentElement.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                        
+                        // إضافة النشاط للتبويب الحالي
+                        tab.classList.add('active');
+                        document.getElementById(tabName).classList.add('active');
+                    });
+                });
+            },
+            
+            loadSection(section) {
+                switch(section) {
+                    case 'dashboard':
+                        this.loadDashboard();
+                        break;
+                    case 'products':
+                        this.loadProducts();
+                        break;
+                    case 'inventory':
+                        this.loadInventory();
+                        break;
+                    case 'transactions':
+                        this.loadTransactions();
+                        break;
+                    case 'reports':
+                        this.loadReports();
+                        break;
+                    case 'chat':
+                        this.loadChat();
+                        break;
+                    case 'support':
+                        this.loadSupport();
+                        break;
+                    case 'settings':
+                        this.loadSettings();
+                        break;
+                }
+            },
+            
+            loadDashboard() {
+                const products = Storage.getProducts();
+                const transactions = Storage.getTransactions();
+                const settings = Storage.getSettings();
+                
+                // تحديث الإحصائيات
+                document.getElementById('totalProducts').textContent = products.length;
+                document.getElementById('totalQuantity').textContent = products.reduce((sum, product) => sum + (product.quantity || 0), 0);
+                document.getElementById('lowStockCount').textContent = products.filter(product => product.quantity <= (settings.alertThreshold || 5)).length;
+                
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('todayTransactions').textContent = transactions.filter(transaction => transaction.date === today).length;
+                
+                // تحديث الحركات الحديثة
+                const recentTransactionsBody = document.getElementById('recentTransactions');
+                recentTransactionsBody.innerHTML = '';
+                
+                transactions.slice(0, 5).forEach(transaction => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${transaction.id}</td>
+                        <td>${transaction.date}</td>
+                        <td>${transaction.product}</td>
+                        <td>${transaction.type === 'in' ? 'إدخال' : 'إخراج'}</td>
+                        <td>${transaction.quantity}</td>
+                        <td><span class="status-badge status-active">${transaction.status}</span></td>
+                        <td>
+                            <button class="btn btn-primary"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    recentTransactionsBody.appendChild(row);
+                });
+                
+                // تحديث المنتجات الأكثر حركة
+                const topProductsBody = document.getElementById('topProducts');
+                topProductsBody.innerHTML = '';
+                
+                products.sort((a, b) => (b.sales || 0) - (a.sales || 0)).slice(0, 5).forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${product.name}</td>
+                        <td>${product.price} ر.س</td>
+                        <td>${product.quantity}</td>
+                        <td>${product.sales}</td>
+                        <td><span class="status-badge ${product.quantity > 0 ? 'status-active' : 'status-inactive'}">${product.quantity > 0 ? 'متوفر' : 'غير متوفر'}</span></td>
+                    `;
+                    topProductsBody.appendChild(row);
+                });
+                
+                // تحديث تنبيهات المخزون
+                const stockAlertsContainer = document.getElementById('stockAlerts');
+                stockAlertsContainer.innerHTML = '';
+                
+                const lowStockProducts = products.filter(product => product.quantity <= (settings.alertThreshold || 5));
+                
+                if (lowStockProducts.length === 0) {
+                    stockAlertsContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> لا توجد تنبيهات للمخزون</div>';
+                } else {
+                    lowStockProducts.slice(0, 3).forEach(product => {
+                        const alertElement = document.createElement('div');
+                        alertElement.className = 'alert alert-warning';
+                        alertElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> المنتج ${product.name} منخفض الكمية (${product.quantity} فقط متبقي)`;
+                        stockAlertsContainer.appendChild(alertElement);
+                    });
+                    
+                    if (lowStockProducts.length > 3) {
+                        const moreAlert = document.createElement('div');
+                        moreAlert.className = 'alert alert-info';
+                        moreAlert.innerHTML = `<i class="fas fa-info-circle"></i> وهناك ${lowStockProducts.length - 3} تنبيهات أخرى`;
+                        stockAlertsContainer.appendChild(moreAlert);
+                    }
+                }
+            },
+            
+            loadProducts() {
+                const products = Storage.getProducts();
+                const productsTable = document.querySelector('#products table tbody');
+                productsTable.innerHTML = '';
+                
+                if (products.length === 0) {
+                    productsTable.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="empty-state">
+                                <i class="fas fa-box-open"></i>
+                                <p>لا توجد منتجات</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><img src="${product.image}" alt="${product.name}" style="width:40px; height:40px; border-radius:5px;"></td>
+                        <td>${product.name}</td>
+                        <td>${product.category}</td>
+                        <td>${product.price} ر.س</td>
+                        <td>${product.quantity}</td>
+                        <td><span class="status-badge ${product.quantity > 0 ? 'status-active' : 'status-inactive'}">${product.quantity > 0 ? 'متوفر' : 'غير متوفر'}</span></td>
+                        <td>
+                            <button class="btn btn-primary"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    productsTable.appendChild(row);
+                });
+            },
+            
+            loadInventory() {
+                const transactions = Storage.getTransactions();
+                const inventoryTable = document.querySelector('#inventory table tbody');
+                inventoryTable.innerHTML = '';
+                
+                if (transactions.length === 0) {
+                    inventoryTable.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="empty-state">
+                                <i class="fas fa-exchange-alt"></i>
+                                <p>لا توجد حركات</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                transactions.forEach(transaction => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${transaction.id}</td>
+                        <td>${transaction.date}</td>
+                        <td>${transaction.product}</td>
+                        <td>${transaction.type === 'in' ? 'إدخال' : 'إخراج'}</td>
+                        <td>${transaction.quantity}</td>
+                        <td>المستودع الرئيسي</td>
+                        <td><span class="status-badge status-active">${transaction.status}</span></td>
+                        <td>
+                            <button class="btn btn-primary"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    inventoryTable.appendChild(row);
+                });
+            },
+            
+            loadTransactions() {
+                const transactions = Storage.getTransactions();
+                const transactionsTable = document.querySelector('#transactions table tbody');
+                transactionsTable.innerHTML = '';
+                
+                if (transactions.length === 0) {
+                    transactionsTable.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <p>لا توجد حركات</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                transactions.forEach(transaction => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${transaction.id}</td>
+                        <td>${transaction.date}</td>
+                        <td>${transaction.product}</td>
+                        <td>${transaction.type === 'in' ? 'إدخال' : 'إخراج'}</td>
+                        <td>${transaction.quantity}</td>
+                        <td>مستخدم النظام</td>
+                        <td><span class="status-badge status-active">${transaction.status}</span></td>
+                        <td>
+                            <button class="btn btn-primary"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    transactionsTable.appendChild(row);
+                });
+            },
+            
+            loadReports() {
+                // يمكن إضافة المزيد من الوظائف للتقارير هنا
+                console.log('تحميل التقارير');
+            },
+            
+            loadChat() {
+                const messages = Storage.getMessages();
+                const chatMessagesContainer = document.getElementById('chatMessages');
+                chatMessagesContainer.innerHTML = '';
+                
+                messages.forEach(message => {
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `message ${message.type}`;
+                    messageElement.innerHTML = `
+                        <div class="message-bubble">${message.text}</div>
+                        <div class="message-info">${message.sender} - ${message.time.split(' ')[1]}</div>
+                    `;
+                    chatMessagesContainer.appendChild(messageElement);
+                });
+                
+                // التمرير إلى أحدث رسالة
+                chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            },
+            
+            loadSupport() {
+                const tickets = Storage.getTickets();
+                const myTicketsContainer = document.getElementById('supportTickets');
+                const allTicketsContainer = document.getElementById('allSupportTickets');
+                
+                myTicketsContainer.innerHTML = '';
+                allTicketsContainer.innerHTML = '';
+                
+                if (tickets.length === 0) {
+                    myTicketsContainer.innerHTML = '<p>لا توجد تذاكر دعم فني</p>';
+                    allTicketsContainer.innerHTML = '<p>لا توجد تذاكر دعم فني</p>';
+                    return;
+                }
+                
+                // تذاكري (المفتوحة فقط)
+                const myTickets = tickets.filter(ticket => ticket.status === 'open');
+                if (myTickets.length === 0) {
+                    myTicketsContainer.innerHTML = '<p>لا توجد تذاكر مفتوحة</p>';
+                } else {
+                    myTickets.forEach(ticket => {
+                        const ticketElement = this.createTicketElement(ticket);
+                        myTicketsContainer.appendChild(ticketElement);
+                    });
+                }
+                
+                // جميع التذاكر
+                tickets.forEach(ticket => {
+                    const ticketElement = this.createTicketElement(ticket);
+                    allTicketsContainer.appendChild(ticketElement);
+                });
+            },
+            
+            createTicketElement(ticket) {
+                const ticketElement = document.createElement('div');
+                ticketElement.className = 'support-ticket';
+                ticketElement.innerHTML = `
+                    <div class="ticket-header">
+                        <div class="ticket-title">${ticket.title}</div>
+                        <span class="ticket-status ${ticket.status}">${ticket.status === 'open' ? 'مفتوحة' : 'مغلقة'}</span>
+                    </div>
+                    <div class="ticket-meta">
+                        <span>النوع: ${this.getTicketCategoryName(ticket.category)}</span>
+                        <span> | </span>
+                        <span>الأولوية: ${this.getTicketPriorityName(ticket.priority)}</span>
+                        <span> | </span>
+                        <span>التاريخ: ${ticket.date}</span>
+                    </div>
+                    <div class="ticket-actions">
+                        <button class="btn btn-primary view-ticket" data-id="${ticket.id}">عرض</button>
+                    </div>
+                `;
+                return ticketElement;
+            },
+            
+            loadSettings() {
+                const settings = Storage.getSettings();
+                const users = Storage.getUsers();
+                
+                // تحميل الإعدادات العامة
+                document.querySelector('#generalSettings input[type="number"]').value = settings.alertThreshold || 5;
+                
+                // تحميل المستخدمين
+                const usersTable = document.querySelector('#userSettings table tbody');
+                usersTable.innerHTML = '';
+                
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>${user.role}</td>
+                        <td><span class="status-badge status-active">${user.status}</span></td>
+                        <td>
+                            <button class="btn btn-primary"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    usersTable.appendChild(row);
+                });
+            },
+            
+            saveTicket() {
+                const title = document.getElementById('ticketTitle').value;
+                const category = document.getElementById('ticketCategory').value;
+                const description = document.getElementById('ticketDescription').value;
+                const priority = document.getElementById('ticketPriority').value;
+                
+                if (!title || !description) {
+                    alert('يرجى ملء جميع الحقول المطلوبة');
+                    return;
+                }
+                
+                const tickets = Storage.getTickets();
+                const newTicket = {
+                    id: tickets.length > 0 ? Math.max(...tickets.map(t => t.id)) + 1 : 1,
+                    title,
+                    category,
+                    priority,
+                    status: 'open',
+                    author: 'مستخدم النظام',
+                    date: new Date().toISOString().split('T')[0],
+                    description
+                };
+                
+                tickets.push(newTicket);
+                Storage.saveTickets(tickets);
+                
+                alert('تم إرسال التذكرة بنجاح');
+                document.getElementById('ticketModal').style.display = 'none';
+                
+                // مسح الحقول
+                document.getElementById('ticketTitle').value = '';
+                document.getElementById('ticketDescription').value = '';
+                
+                // إعادة تحميل قسم الدعم
+                this.loadSupport();
+                
+                // تحديث الإشعارات
+                this.updateNotifications();
+            },
+            
+            viewTicket(ticketId) {
+                const tickets = Storage.getTickets();
+                const ticket = tickets.find(t => t.id == ticketId);
+                
+                if (!ticket) {
+                    alert('التذكرة غير موجودة');
+                    return;
+                }
+                
+                document.getElementById('ticketViewTitle').textContent = ticket.title;
+                document.getElementById('ticketViewStatus').textContent = ticket.status === 'open' ? 'مفتوحة' : 'مغلقة';
+                document.getElementById('ticketViewStatus').className = `ticket-status ${ticket.status}`;
+                document.getElementById('ticketViewAuthor').textContent = `بواسطة: ${ticket.author}`;
+                document.getElementById('ticketViewDate').textContent = `تاريخ الإنشاء: ${ticket.date}`;
+                document.getElementById('ticketViewPriority').textContent = `الأولوية: ${this.getTicketPriorityName(ticket.priority)}`;
+                document.getElementById('ticketViewDescription').textContent = ticket.description;
+                
+                // مسح التعليقات السابقة
+                document.getElementById('ticketComments').innerHTML = '';
+                
+                // إضافة تعليق افتراضي
+                const commentElement = document.createElement('div');
+                commentElement.className = 'ticket-comment';
+                commentElement.innerHTML = `
+                    <div><strong>الدعم الفني:</strong> تم استلام تذكرتك وسيتم الرد قريباً</div>
+                    <div class="ticket-meta">${new Date().toLocaleString()}</div>
+                `;
+                document.getElementById('ticketComments').appendChild(commentElement);
+                
+                document.getElementById('viewTicketModal').style.display = 'flex';
+                
+                // حفظ معرف التذكرة الحالية
+                document.getElementById('viewTicketModal').setAttribute('data-ticket-id', ticketId);
+            },
+            
+            addComment() {
+                const comment = document.getElementById('ticketComment').value.trim();
+                if (!comment) return;
+                
+                const commentElement = document.createElement('div');
+                commentElement.className = 'ticket-comment';
+                commentElement.innerHTML = `
+                    <div><strong>أنت:</strong> ${comment}</div>
+                    <div class="ticket-meta">${new Date().toLocaleString()}</div>
+                `;
+                document.getElementById('ticketComments').appendChild(commentElement);
+                
+                document.getElementById('ticketComment').value = '';
+            },
+            
+            closeTicket() {
+                const ticketId = document.getElementById('viewTicketModal').getAttribute('data-ticket-id');
+                if (!ticketId) return;
+                
+                const tickets = Storage.getTickets();
+                const ticketIndex = tickets.findIndex(t => t.id == ticketId);
+                
+                if (ticketIndex !== -1) {
+                    tickets[ticketIndex].status = 'closed';
+                    Storage.saveTickets(tickets);
+                    
+                    document.getElementById('ticketViewStatus').textContent = 'مغلقة';
+                    document.getElementById('ticketViewStatus').className = 'ticket-status closed';
+                    
+                    alert('تم إغلاق التذكرة بنجاح');
+                    
+                    // إعادة تحميل قسم الدعم
+                    this.loadSupport();
+                }
+            },
+            
+            sendMessage() {
+                const messageInput = document.getElementById('messageInput');
+                const message = messageInput.value.trim();
+                
+                if (!message) return;
+                
+                const messages = Storage.getMessages();
+                const newMessage = {
+                    id: messages.length > 0 ? Math.max(...messages.map(m => m.id)) + 1 : 1,
+                    sender: 'أنت',
+                    text: message,
+                    time: new Date().toLocaleString(),
+                    type: 'sent'
+                };
+                
+                messages.push(newMessage);
+                Storage.saveMessages(messages);
+                
+                // إضافة الرسالة إلى الدردشة
+                const chatMessagesContainer = document.getElementById('chatMessages');
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message sent';
+                messageElement.innerHTML = `
+                    <div class="message-bubble">${message}</div>
+                    <div class="message-info">أنت - ${new Date().toLocaleTimeString()}</div>
+                `;
+                chatMessagesContainer.appendChild(messageElement);
+                
+                // مسح حقل الإدخال
+                messageInput.value = '';
+                
+                // التمرير إلى الأسفل
+                chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+                
+                // إضافة رد تلقائي بعد ثانية
+                setTimeout(() => {
+                    const autoReply = {
+                        id: messages.length + 1,
+                        sender: 'الدعم',
+                        text: 'شكراً على رسالتك، سنرد قريباً',
+                        time: new Date().toLocaleString(),
+                        type: 'received'
+                    };
+                    
+                    messages.push(autoReply);
+                    Storage.saveMessages(messages);
+                    
+                    const replyElement = document.createElement('div');
+                    replyElement.className = 'message received';
+                    replyElement.innerHTML = `
+                        <div class="message-bubble">${autoReply.text}</div>
+                        <div class="message-info">${autoReply.sender} - ${new Date().toLocaleTimeString()}</div>
+                    `;
+                    chatMessagesContainer.appendChild(replyElement);
+                    
+                    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+                }, 1000);
+            },
+            
+            updateNotifications() {
+                const products = Storage.getProducts();
+                const settings = Storage.getSettings();
+                const lowStockCount = products.filter(product => product.quantity <= (settings.alertThreshold || 5)).length;
+                
+                if (lowStockCount > 0) {
+                    document.getElementById('notificationCount').textContent = lowStockCount;
+                    document.getElementById('notificationCount').style.display = 'inline';
+                } else {
+                    document.getElementById('notificationCount').style.display = 'none';
+                }
+            },
+            
+            getTicketCategoryName(category) {
+                const categories = {
+                    'technical': 'مشكلة فنية',
+                    'bug': 'بلاغ عن خطأ',
+                    'feature': 'طلب ميزة جديدة',
+                    'other': 'أخرى'
+                };
+                return categories[category] || category;
+            },
+            
+            getTicketPriorityName(priority) {
+                const priorities = {
+                    'low': 'منخفضة',
+                    'medium': 'متوسطة',
+                    'high': 'عالية',
+                    'urgent': 'عاجلة'
+                };
+                return priorities[priority] || priority;
+            }
+        };
+
+        // بدء التطبيق عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init();
+        });
+    </script>
+</body>
+</html>
